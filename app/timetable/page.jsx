@@ -1,163 +1,278 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Download, Calendar } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
-import ColorPicker from "@/components/ColorPicker";
 
-export default function Page() {
-  const [weeks, setWeeks] = useState(4);
-  const [startDate, setStartDate] = useState("2024-11-17");
-  const [firstWeekType, setFirstWeekType] = useState("A");
-  const [mergePeriods, setMergePeriods] = useState(true);
-  const [colors, setColors] = useState({});
+import { useState } from "react";
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("subjectColors") || "{}");
-    setColors(saved);
-  }, []);
+// Google Calendar Material Event Colors
+const GOOGLE_COLORS = [
+  { name: "Tomato", hex: "#d50000" },
+  { name: "Flamingo", hex: "#db4437" },
+  { name: "Tangerine", hex: "#f4b400" },
+  { name: "Banana", hex: "#fbc02d" },
+  { name: "Sage", hex: "#0f9d58" },
+  { name: "Basil", hex: "#0b8043" },
+  { name: "Peacock", hex: "#039be5" },
+  { name: "Blueberry", hex: "#4285f4" },
+  { name: "Lavender", hex: "#5e35b1" },
+  { name: "Grape", hex: "#8e24aa" },
+];
 
-  const timetable = {
-    A: { Monday: [ { periods: ['P1', 'P2'], subject: 'Physics', code: 'PPHY.B', teacher: 'Mr S Harrison', room: 'G4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Extension Mathematics 1', code: 'PMAX1.A', teacher: 'Mr A Sharma', room: 'E4' }, { periods: ['P6b', 'P7', 'P8'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms F Deb Chaudhuri', room: 'G4' } ], Tuesday: [ { periods: ['P1', 'P2'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms D Pahwa', room: 'G4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'SOR', code: 'PSOR1.A', teacher: 'Ms B Mannes', room: 'E4' }, { periods: ['P6b', 'P7'], subject: 'Physics', code: 'PPHY.B', teacher: "Mx O'Leary", room: 'G4' }, { periods: ['P8'], subject: 'Pause', code: '1.2PAUSE.2', teacher: 'Ms F McNicol', room: 'C9' } ], Wednesday: [ { periods: ['P1', 'P2'], subject: 'SOR', code: 'PSOR1.A', teacher: 'Ms B Mannes', room: 'E4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Physics', code: 'PPHY.B', teacher: "Mx O'Leary", room: 'G4' } ], Thursday: [ { periods: ['P1', 'P2'], subject: 'Physics', code: 'PPHY.B', teacher: 'Mr S Harrison', room: 'G4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms F Deb Chaudhuri', room: 'G4' }, { periods: ['P6b', 'P7', 'P8'], subject: 'SOR', code: 'PSOR1.A', teacher: 'Ms B Mannes', room: 'E4' } ], Friday: [ { periods: ['P1', 'P2'], subject: 'Extension Mathematics 1', code: 'PMAX1.A', teacher: 'Mr A Sharma', room: 'E4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms D Pahwa', room: 'G4' }, { periods: ['P6b', 'P7', 'P8'], subject: 'Physics', code: 'PPHY.B', teacher: "Mx O'Leary", room: 'G4' } ] }, B: { Monday: [ { periods: ['P1', 'P2'], subject: 'Physics', code: 'PPHY.B', teacher: "Mx O'Leary", room: 'G4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Extension Mathematics 1', code: 'PMAX1.A', teacher: 'Mr A Sharma', room: 'E4' }, { periods: ['P6b', 'P7', 'P8'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms F Deb Chaudhuri', room: 'G4' } ], Tuesday: [ { periods: ['P1', 'P2'], subject: 'SOR', code: 'PSOR1.A', teacher: 'Ms B Mannes', room: 'E4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms D Pahwa', room: 'G4' }, { periods: ['P6b', 'P7'], subject: 'Physics', code: 'PPHY.B', teacher: "Mx O'Leary", room: 'G4' }, { periods: ['P8'], subject: 'Pause', code: '1.2PAUSE.2', teacher: 'Ms F McNicol', room: 'C9' } ], Wednesday: [ { periods: ['P1', 'P2'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms D Pahwa', room: 'G4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Physics', code: 'PPHY.B', teacher: 'Mr S Harrison', room: 'G4' } ], Thursday: [ { periods: ['P1', 'P2'], subject: 'Physics', code: 'PPHY.B', teacher: 'Mr S Harrison', room: 'G4' }, { periods: ['P3b'], subject: 'SOR', code: 'PSOR1.A', teacher: 'Ms B Mannes', room: 'E4' }, { periods: ['P4', 'P5'], subject: 'Extension Mathematics 1', code: 'PMAX1.A', teacher: 'Mr A Sharma', room: 'E4' }, { periods: ['P6b', 'P7', 'P8'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms D Pahwa', room: 'G4' } ], Friday: [ { periods: ['P1', 'P2'], subject: 'Chemistry', code: 'PCHE.C', teacher: 'Ms F Deb Chaudhuri', room: 'G4' }, { periods: ['P3b', 'P4', 'P5'], subject: 'Physics', code: 'PPHY.B', teacher: 'Mr S Harrison', room: 'G4' }, { periods: ['P6b', 'P7', 'P8'], subject: 'Extension Mathematics 1', code: 'PMAX1.A', teacher: 'Mr A Sharma', room: 'E4' } ] }
-  };
+export default function TimetablePage() {
+  // Timetable JSON after import
+  const [timetable, setTimetable] = useState(null);
 
-  const periodTimes = {
-    P1: { start: 525, duration: 38 },
-    P2: { start: 563, duration: 39 },
-    P3b: { start: 632, duration: 40 },
-    P4: { start: 672, duration: 37 },
-    P5: { start: 709, duration: 40 },
-    P6b: { start: 779, duration: 38 },
-    P7: { start: 817, duration: 40 },
-    P8: { start: 857, duration: 40 },
-    P8_Pause: { start: 857, duration: 29 },
-  };
+  // UI selections
+  const [color, setColor] = useState("#4285f4");
+  const [weeks, setWeeks] = useState(10);
 
-  const colorFor = (subject) => colors[subject] || "#3b82f6";
+  // Default start date = 2025
+  const [startDate, setStartDate] = useState("2025-01-27");
 
-  const fmtTime = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}${String(m % 60).padStart(2, "0")}`;
-  const fmtDate = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  // Raw text input for parsing
+  const [raw, setRaw] = useState("");
+  const [error, setError] = useState("");
 
-  const getRanges = (periods, isPause) => {
-    if (mergePeriods) {
-      const start = periodTimes[periods[0]].start;
-      const last = periods[periods.length - 1];
-      const end = isPause && last === "P8"
-        ? periodTimes["P8_Pause"].start + periodTimes["P8_Pause"].duration
-        : periodTimes[last].start + periodTimes[last].duration;
-      return [{ start, end }];
+  //-----------------------------------------------------------------------
+  // PARSER
+  //-----------------------------------------------------------------------
+  const parseTimetable = () => {
+    try {
+      const lines = raw.split("\n").map(l => l.trim()).filter(Boolean);
+      const result = { A: {}, B: {} };
+
+      let currentWeek = null;
+      let currentDay = null;
+
+      for (const line of lines) {
+        if (/^Week\s*A$/i.test(line)) { currentWeek = "A"; continue; }
+        if (/^Week\s*B$/i.test(line)) { currentWeek = "B"; continue; }
+
+        if (/^(Monday|Tuesday|Wednesday|Thursday|Friday)$/i.test(line)) {
+          currentDay = line;
+          result[currentWeek][currentDay] = [];
+          continue;
+        }
+
+        // Columns: Period | Subject | Code | Teacher | Room
+        const parts = line.split(/\s{2,}|\t/g).filter(Boolean);
+        if (parts.length >= 5) {
+          const [period, subject, code, teacher, room] = parts;
+          result[currentWeek][currentDay].push({
+            period, subject, code, teacher, room
+          });
+        }
+      }
+
+      // Merge identical consecutive rows
+      for (const week of ["A", "B"]) {
+        for (const day of Object.keys(result[week])) {
+          const rows = result[week][day];
+          const grouped = [];
+          let buffer = null;
+
+          for (const row of rows) {
+            if (!buffer) {
+              buffer = {
+                subject: row.subject,
+                code: row.code,
+                teacher: row.teacher,
+                room: row.room,
+                periods: [row.period]
+              };
+              continue;
+            }
+
+            // Matching row → extend period block
+            if (
+              buffer.subject === row.subject &&
+              buffer.code === row.code &&
+              buffer.teacher === row.teacher
+            ) {
+              buffer.periods.push(row.period);
+            } else {
+              grouped.push(buffer);
+              buffer = {
+                subject: row.subject,
+                code: row.code,
+                teacher: row.teacher,
+                room: row.room,
+                periods: [row.period]
+              };
+            }
+          }
+
+          if (buffer) grouped.push(buffer);
+          result[week][day] = grouped;
+        }
+      }
+
+      setTimetable(result);
+      setError("");
+    } catch (e) {
+      console.error(e);
+      setError("Failed to parse timetable. Check text formatting.");
     }
-    return periods.map((p) => ({
-      start: periodTimes[p].start,
-      end: periodTimes[p].start + periodTimes[p].duration,
-    }));
   };
 
-  const generateICS = () => {
-    let ics = `BEGIN:VCALENDAR
-VERSION:2.0
-CALSCALE:GREGORIAN
-PRODID:-//Timetable//EN
-X-WR-CALNAME:School Timetable\n`;
+  //-----------------------------------------------------------------------
+  // ICS GENERATION
+  //-----------------------------------------------------------------------
+  const downloadICS = () => {
+    if (!timetable) return;
 
     const start = new Date(startDate);
-    const dayOffset = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4 };
+    const MILLI_DAY = 86400000;
 
+    const dayToOffset = {
+      Monday: 0,
+      Tuesday: 1,
+      Wednesday: 2,
+      Thursday: 3,
+      Friday: 4,
+    };
+
+    let events = [];
+
+    // Week loop
     for (let w = 0; w < weeks; w++) {
-      const weekType = w % 2 === 0 ? firstWeekType : firstWeekType === "A" ? "B" : "A";
-      const base = new Date(start);
-      base.setDate(start.getDate() + w * 7);
+      const weekLetter = w % 2 === 0 ? "A" : "B";
 
-      Object.entries(timetable[weekType]).forEach(([day, events]) => {
-        const dayDate = new Date(base);
-        dayDate.setDate(base.getDate() + dayOffset[day]);
+      for (const day of Object.keys(timetable[weekLetter])) {
+        const offsetDays = (w * 7) + dayToOffset[day];
+        const baseDate = new Date(start.getTime() + offsetDays * MILLI_DAY);
 
-        events.forEach((info) => {
-          const ranges = getRanges(info.periods, info.subject === "Pause");
-          ranges.forEach(({ start, end }) => {
-            const uid = `${fmtDate(dayDate)}-${info.code}-${start}@school`;
+        for (const block of timetable[weekLetter][day]) {
+          // For default calendar apps, assign 09:00 start per period
+          block.periods.forEach((period, i) => {
+            const eventStart = new Date(baseDate);
+            eventStart.setHours(9 + (parseInt(period.replace("P", "")) - 1), 0, 0);
 
-            ics += `BEGIN:VEVENT
-DTSTART:${fmtDate(dayDate)}T${fmtTime(start)}00
-DTEND:${fmtDate(dayDate)}T${fmtTime(end)}00
-SUMMARY:${info.subject} (${info.code})
-LOCATION:${info.room}
-COLOR:${colorFor(info.subject)}
-DESCRIPTION:Teacher: ${info.teacher}\\nPeriods: ${info.periods.join(", ")}
-UID:${uid}
-END:VEVENT
-`;
+            const eventEnd = new Date(eventStart.getTime() + 50 * 60000);
+
+            events.push({
+              summary: `${block.subject} (${block.code})`,
+              location: block.room,
+              description: `Teacher: ${block.teacher} | Week ${weekLetter}`,
+              start: eventStart,
+              end: eventEnd
+            });
           });
-        });
-      });
+        }
+      }
     }
 
-    return ics + "END:VCALENDAR";
-  };
+    // Build ICS
+    const pad = n => String(n).padStart(2, "0");
 
-  const downloadICS = () => {
-    const blob = new Blob([generateICS()], { type: "text/calendar" });
+    const formatDate = d =>
+      `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T` +
+      `${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+
+    let ics = `BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n`;
+
+    for (const ev of events) {
+      ics += `BEGIN:VEVENT\n`;
+      ics += `SUMMARY:${ev.summary}\n`;
+      ics += `DTSTART:${formatDate(ev.start)}\n`;
+      ics += `DTEND:${formatDate(ev.end)}\n`;
+      ics += `LOCATION:${ev.location}\n`;
+      ics += `DESCRIPTION:${ev.description}\n`;
+      ics += `COLOR:${color}\n`;
+      ics += `END:VEVENT\n`;
+    }
+
+    ics += "END:VCALENDAR";
+
+    const blob = new Blob([ics], { type: "text/calendar" });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
-    a.download = "school_timetable.ics";
+    a.download = "timetable.ics";
     a.click();
   };
 
-  const allSubjects = Array.from(
-    new Set(
-      Object.values(timetable)
-        .flatMap((d) => Object.values(d).flatMap((x) => x.map((c) => c.subject)))
-    )
-  );
-
+  //-----------------------------------------------------------------------
+  // RENDER
+  //-----------------------------------------------------------------------
   return (
-    <main className="min-h-screen p-6 bg-white dark:bg-gray-900 dark:text-gray-100 transition">
-      <div className="max-w-4xl mx-auto bg-gray-50 dark:bg-gray-800 rounded-xl p-8 shadow-lg">
-        <div className="flex justify-between mb-6 items-center">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calendar className="text-indigo-500" /> Timetable Generator
-          </h1>
-          <ThemeToggle />
-        </div>
+    <div className="min-h-screen w-full p-6 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+      <div className="max-w-3xl mx-auto space-y-8">
 
-        {/* Color pickers */}
-        <h2 className="font-semibold mb-2">Subject Colors</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
-          {allSubjects.map((sub) => (
-            <div key={sub} className="flex items-center justify-between bg-white dark:bg-gray-700 p-2 rounded border dark:border-gray-600">
-              <span>{sub}</span>
-              <ColorPicker subject={sub} colors={colors} setColors={setColors} />
+        {/* HEADER */}
+        <h1 className="text-3xl font-bold text-center">Timetable → Calendar Converter</h1>
+        <p className="text-center text-gray-600 dark:text-gray-400">
+          Paste your school timetable and export as Google Calendar / iCloud .ICS
+        </p>
+
+        {/* MAIN CARD */}
+        <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow border dark:border-gray-700 space-y-6">
+
+          {/* RAW INPUT */}
+          <div className="space-y-2">
+            <label className="font-semibold">Paste Timetable Text</label>
+            <textarea
+              className="w-full h-56 p-3 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white"
+              value={raw}
+              onChange={(e) => setRaw(e.target.value)}
+            />
+            {error && <p className="text-red-500">{error}</p>}
+            <button
+              onClick={parseTimetable}
+              className="px-4 py-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded"
+            >
+              Import Timetable
+            </button>
+          </div>
+
+          {/* OPTIONS */}
+          <div className="space-y-4">
+            <div>
+              <label className="font-semibold">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700"
+              />
             </div>
-          ))}
+
+            <div>
+              <label className="font-semibold">Number of Weeks</label>
+              <input
+                type="number"
+                value={weeks}
+                onChange={e => setWeeks(parseInt(e.target.value))}
+                className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold">Event Colour</label>
+              <div className="grid grid-cols-5 gap-3 mt-2">
+                {GOOGLE_COLORS.map(c => (
+                  <div
+                    key={c.hex}
+                    onClick={() => setColor(c.hex)}
+                    className={`h-10 rounded cursor-pointer border-2
+                      ${color === c.hex ? "border-black dark:border-white" : "border-transparent"}`}
+                    style={{ backgroundColor: c.hex }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* EXPORT */}
+          {timetable && (
+            <button
+              onClick={downloadICS}
+              className="px-4 py-3 w-full bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded"
+            >
+              Download .ICS File
+            </button>
+          )}
         </div>
-
-        {/* Settings */}
-        <label>Start Date</label>
-        <input type="date" value={startDate} onChange={(e)=>setStartDate(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-white dark:bg-gray-700 border dark:border-gray-600" />
-
-        <label>First Week</label>
-        <select value={firstWeekType} onChange={(e)=>setFirstWeekType(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-white dark:bg-gray-700 border dark:border-gray-600">
-          <option>A</option><option>B</option>
-        </select>
-
-        <label>Week Cycles</label>
-        <input type="number" value={weeks} min="1" max="20" onChange={(e)=>setWeeks(+e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-white dark:bg-gray-700 border dark:border-gray-600" />
-
-        <label>Event Mode</label>
-        <select value={mergePeriods} onChange={(e)=>setMergePeriods(e.target.value === "true")}
-          className="w-full p-2 mb-6 rounded bg-white dark:bg-gray-700 border dark:border-gray-600">
-          <option value="true">Merged classes</option>
-          <option value="false">Per period</option>
-        </select>
-
-        <button onClick={downloadICS}
-          className="w-full py-3 font-semibold bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white rounded-lg flex gap-2 justify-center">
-          <Download /> Download .ics
-        </button>
       </div>
-    </main>
+    </div>
   );
 }
