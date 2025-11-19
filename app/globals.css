@@ -4,4 +4,5 @@
 
 body {
   @apply transition-colors duration-300;
+  html, body { height: 100%; }
 }
