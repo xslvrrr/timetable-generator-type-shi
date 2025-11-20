@@ -46,6 +46,7 @@ export default function Page() {
   const [error, setError] = useState("");
 
   const [weeks, setWeeks] = useState(4);
+  const [firstWeekType, setFirstWeekType] = useState("A");
   const [startDate, setStartDate] = useState("2025-11-17");
   const [mergeMulti, setMergeMulti] = useState(true);
 
@@ -299,8 +300,7 @@ export default function Page() {
 
           <div>
             <label>First Week</label>
-            <select value={firstWeekType} onChange={(e)=>setFirstWeekType(e.target.value)}
-              className="w-full p-2 mb-4 rounded bg-white dark:bg-gray-700 border dark:border-gray-600">
+            <select value={firstWeekType} onChange={(e)=>setFirstWeekType(e.target.value)}>
               <option>A</option><option>B</option>
             </select>
           </div>
