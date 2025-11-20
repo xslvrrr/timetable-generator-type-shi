@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Calendar, Download, Moon, Sun, RefreshCw, Trash2, Palette } from "lucide-react";
 
 /* Google Calendar colours */
 const GOOGLE_COLORS = [
@@ -58,17 +59,17 @@ export default function Page() {
     }
   });
 
-  const [isDark, setIsDark] = useState(() => {
-    try {
-      return localStorage.getItem("theme") === "dark";
-    } catch {
-      return false;
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Check system preference on mount
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setIsDark(true);
     }
-  });
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("theme", isDark ? "dark" : "light");
   }, [isDark]);
 
   useEffect(() => {
@@ -101,9 +102,14 @@ export default function Page() {
         continue;
       }
 
-      const parts = raw.split("\t").map((x) => x.trim()).filter(Boolean);
+      // Split by tab or 2+ spaces to handle copy-paste variations
+      const parts = raw.split(/\t|\s{2,}/).map((x) => x.trim()).filter(Boolean);
+
       if (parts.length >= 5) {
+        // Sometimes the period might be split if it has spaces, but usually it's the first item
+        // We assume standard format: Period, Subject, Class, Teacher, Room
         const [period, subject, code, teacher, room] = parts;
+
         if (!week) week = "A";
         if (!day) day = "Monday";
 
@@ -126,13 +132,13 @@ export default function Page() {
         let buf = null;
 
         for (const r of rows) {
-          if (
-            buf &&
-            buf.subject === r.subject &&
-            buf.code === r.code &&
-            buf.teacher === r.teacher &&
-            buf.room === r.room
-          ) {
+          // Normalize strings for comparison to avoid split blocks due to whitespace
+          const sameSubject = buf && buf.subject.trim() === r.subject.trim();
+          const sameCode = buf && buf.code.trim() === r.code.trim();
+          const sameTeacher = buf && buf.teacher.trim() === r.teacher.trim();
+          const sameRoom = buf && buf.room.trim() === r.room.trim();
+
+          if (sameSubject && sameCode && sameTeacher && sameRoom) {
             buf.periods.push(r.period);
           } else {
             if (buf) merged.push(buf);
@@ -178,7 +184,10 @@ export default function Page() {
     let events = [];
 
     for (let c = 0; c < weeks; c++) {
-      const W = c % 2 === 0 ? "A" : "B";
+      // Determine week type based on start week and current cycle index
+      const isEven = c % 2 === 0;
+      const W = isEven ? firstWeekType : (firstWeekType === "A" ? "B" : "A");
+
       for (const day of Object.keys(tt?.[W] || {})) {
         const blocks = tt[W][day];
         const offset = c * 7 + (dayIndex[day] || 0);
@@ -269,124 +278,186 @@ export default function Page() {
   }
 
   return (
-    <div className="container">
+    <div className="min-h-screen p-6 md:p-12 flex items-center justify-center">
+      <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Timetable → ICS</h1>
-        <button className="secondary" onClick={() => setIsDark((s) => !s)}>
-          {isDark ? "Light" : "Dark"}
-        </button>
-      </div>
+        {/* Left Column: Input & Settings */}
+        <div className="space-y-6">
+          <div className="glass-panel rounded-2xl p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                Timetable Generator
+              </h1>
+              <button
+                onClick={() => setIsDark(!isDark)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                {isDark ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+            </div>
 
-      <div className="card">
-        <label>Paste your timetable (tab-separated)</label>
-        <textarea
-          value={rawText}
-          onChange={(e) => setRawText(e.target.value)}
-        />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Paste Timetable Data
+                </label>
+                <textarea
+                  className="input-field h-48 font-mono text-xs resize-none"
+                  placeholder="Paste your timetable text here..."
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                />
+              </div>
 
-        <div style={{ display: "flex", gap: "10px", marginTop: "14px" }}>
-          <button className="primary" onClick={importTT}>Import</button>
-          <button className="secondary" onClick={() => { setRawText(""); setTimetable(null); }}>Clear</button>
+              <div className="flex gap-3">
+                <button onClick={importTT} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  <RefreshCw size={18} /> Import
+                </button>
+                <button
+                  onClick={() => { setRawText(""); setTimetable(null); }}
+                  className="btn-secondary flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={18} /> Clear
+                </button>
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-2xl p-8">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Calendar size={20} /> Configuration
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1 text-gray-500 uppercase">Start Date</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 text-gray-500 uppercase">First Week</label>
+                <select
+                  className="input-field"
+                  value={firstWeekType}
+                  onChange={(e) => setFirstWeekType(e.target.value)}
+                >
+                  <option value="A">Week A</option>
+                  <option value="B">Week B</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 text-gray-500 uppercase">Duration (Weeks)</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={weeks}
+                  min={1}
+                  max={52}
+                  onChange={(e) => setWeeks(+e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1 text-gray-500 uppercase">Event Mode</label>
+                <select
+                  className="input-field"
+                  value={mergeMulti ? "merged" : "per"}
+                  onChange={(e) => setMergeMulti(e.target.value === "merged")}
+                >
+                  <option value="merged">Merge Blocks</option>
+                  <option value="per">Individual Periods</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
-
-        <div className="grid grid-3" style={{ marginTop: "24px" }}>
-          <div>
-            <label>Start date</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-
-          <div>
-            <label>First Week</label>
-            <select value={firstWeekType} onChange={(e)=>setFirstWeekType(e.target.value)}>
-              <option>A</option><option>B</option>
-            </select>
-          </div>
-
-          <div>
-            <label>Week cycles</label>
-            <input type="number" value={weeks} min={1} max={52} onChange={(e) => setWeeks(+e.target.value)} />
-          </div>
-
-          <div>
-            <label>Event mode</label>
-            <select value={mergeMulti ? "merged" : "per"} onChange={(e) => setMergeMulti(e.target.value === "merged")}>
-              <option value="merged">Merge multi-period</option>
-              <option value="per">Individual per period</option>
-            </select>
-          </div>
-        </div>
-
-        <h3 style={{ marginTop: "30px" }}>Subject colours</h3>
-        {!timetable && <p style={{ fontSize: "14px" }}>Import timetable to see subjects.</p>}
-
-        {timetable && (
-          <div className="grid grid-1" style={{ marginTop: "12px" }}>
-            {subjects.map((s) => (
-              <div key={s} style={{ marginBottom: "10px" }}>
-                <div style={{ marginBottom: "4px" }}>{s}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  {GOOGLE_COLORS.map((c) => (
-                    <div
-                      key={c.hex}
-                      className={`color-swatch ${subjectColors[s] === c.hex ? "color-selected" : ""}`}
-                      style={{ backgroundColor: c.hex }}
-                      onClick={() =>
-                        setSubjectColors((prev) => ({ ...prev, [s]: c.hex }))
-                      }
-                    />
+        {/* Right Column: Preview & Colors */}
+        <div className="space-y-6">
+          {timetable ? (
+            <>
+              <div className="glass-panel rounded-2xl p-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Palette size={20} /> Subject Colors
+                </h2>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {subjects.map((s) => (
+                    <div key={s} className="flex items-center justify-between group">
+                      <span className="text-sm truncate max-w-[150px]" title={s}>{s}</span>
+                      <div className="flex items-center gap-1">
+                        {GOOGLE_COLORS.slice(0, 5).map((c) => (
+                          <button
+                            key={c.hex}
+                            className={`w-5 h-5 rounded-full transition-transform hover:scale-110 ${subjectColors[s] === c.hex ? "ring-2 ring-offset-2 ring-indigo-500" : ""}`}
+                            style={{ backgroundColor: c.hex }}
+                            onClick={() => setSubjectColors((prev) => ({ ...prev, [s]: c.hex }))}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                  <button
-                    className="secondary"
-                    style={{ padding: "4px 8px" }}
-                    onClick={() => {
-                      const copy = { ...subjectColors };
-                      delete copy[s];
-                      setSubjectColors(copy);
-                    }}
-                  >
-                    Reset
+                </div>
+              </div>
+
+              <div className="glass-panel rounded-2xl p-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold">Preview</h2>
+                  <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300">
+                    {Object.keys(timetable.A).length + Object.keys(timetable.B).length} Days Loaded
+                  </span>
+                </div>
+
+                <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {["A", "B"].map((W) => (
+                    <div key={W} className="space-y-3">
+                      <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur py-2">Week {W}</h3>
+                      {Object.keys(timetable[W]).map((d) => (
+                        <div key={d} className="pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                          <h4 className="text-sm font-medium mb-2">{d}</h4>
+                          <div className="space-y-2">
+                            {timetable[W][d].map((b, i) => (
+                              <div key={i} className="text-xs p-2 rounded bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+                                <div>
+                                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{b.subject}</span>
+                                  <span className="text-gray-500 ml-2">({b.code})</span>
+                                </div>
+                                <div className="text-right text-gray-400">
+                                  <div>{b.periods.join(", ")}</div>
+                                  <div>{b.room}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <button onClick={download} className="btn-primary w-full flex items-center justify-center gap-2">
+                    <Download size={20} /> Download ICS File
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-
-        <h3 style={{ marginTop: "30px" }}>Preview</h3>
-        <div className="preview-box">
-          {!timetable && <p>No timetable imported</p>}
-          {timetable && ["A", "B"].map((W) => (
-            <div key={W}>
-              <strong>Week {W}</strong>
-              {Object.keys(timetable[W]).map((d) => (
-                <div key={d} style={{ marginLeft: "10px", marginTop: "4px" }}>
-                  <strong>{d}</strong>
-                  <ul>
-                    {timetable[W][d].map((b, i) => (
-                      <li key={i}>
-                        {b.periods.join(", ")} — {b.subject} ({b.code})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            </>
+          ) : (
+            <div className="glass-panel rounded-2xl p-12 flex flex-col items-center justify-center text-center h-full min-h-[400px] text-gray-400">
+              <Calendar size={48} className="mb-4 opacity-20" />
+              <p className="text-lg font-medium">No Timetable Loaded</p>
+              <p className="text-sm mt-2 max-w-xs">Paste your timetable data on the left and click Import to get started.</p>
             </div>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-          <button className="primary" disabled={!timetable} onClick={download}>
-            Download ICS
-          </button>
-          <button className="secondary" onClick={() => { setTimetable(null); }}>
-            Reset
-          </button>
+          )}
         </div>
       </div>
-
     </div>
   );
 }
