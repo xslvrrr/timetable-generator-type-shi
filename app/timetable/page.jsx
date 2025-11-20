@@ -45,8 +45,8 @@ export default function Page() {
   const [timetable, setTimetable] = useState(null);
   const [error, setError] = useState("");
 
-  const [weeks, setWeeks] = useState(4);
-  const [firstWeekType, setFirstWeekType] = useState("A");
+  const [weeks, setWeeks] = useState(5);
+  const [firstWeekType, setFirstWeekType] = useState("B");
   const [startDate, setStartDate] = useState("2025-11-17");
   const [mergeMulti, setMergeMulti] = useState(true);
 
