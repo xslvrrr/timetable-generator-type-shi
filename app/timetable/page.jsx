@@ -298,6 +298,14 @@ export default function Page() {
           </div>
 
           <div>
+            <label>First Week</label>
+            <select value={firstWeekType} onChange={(e)=>setFirstWeekType(e.target.value)}
+              className="w-full p-2 mb-4 rounded bg-white dark:bg-gray-700 border dark:border-gray-600">
+              <option>A</option><option>B</option>
+            </select>
+          </div>
+
+          <div>
             <label>Week cycles</label>
             <input type="number" value={weeks} min={1} max={52} onChange={(e) => setWeeks(+e.target.value)} />
           </div>
