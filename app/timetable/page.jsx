@@ -52,9 +52,12 @@ export default function Page() {
   const [mergeMulti, setMergeMulti] = useState(true);
 
   const [subjectColors, setSubjectColors] = useState(() => {
+    if (typeof window === "undefined") return {};
     try {
-      return JSON.parse(localStorage.getItem("subjectColors")) || {};
-    } catch {
+      const stored = localStorage.getItem("subjectColors");
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error("Failed to load subject colors:", error);
       return {};
     }
   });
@@ -73,7 +76,12 @@ export default function Page() {
   }, [isDark]);
 
   useEffect(() => {
-    localStorage.setItem("subjectColors", JSON.stringify(subjectColors));
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("subjectColors", JSON.stringify(subjectColors));
+    } catch (error) {
+      console.error("Failed to save subject colors:", error);
+    }
   }, [subjectColors]);
 
   function parse(text) {
@@ -154,12 +162,25 @@ export default function Page() {
   }
 
   function importTT() {
+    if (!rawText.trim()) {
+      setError("Please enter timetable data before importing.");
+      return;
+    }
+
     try {
       const p = parse(rawText);
+      const hasData = Object.keys(p.A).length > 0 || Object.keys(p.B).length > 0;
+
+      if (!hasData) {
+        setError("No valid timetable data found. Please check your input format.");
+        return;
+      }
+
       setTimetable(p);
       setError("");
-    } catch (e) {
-      setError("Failed to parse.");
+    } catch (error) {
+      console.error("Parse error:", error);
+      setError(`Failed to parse timetable: ${error.message || "Unknown error"}`);
     }
   }
 
@@ -267,14 +288,27 @@ export default function Page() {
   }, [timetable]);
 
   function download() {
-    const ics = generateICS(timetable);
-    const blob = new Blob([ics], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "timetable.ics";
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!timetable) return;
+
+    try {
+      const ics = generateICS(timetable);
+      const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      // Create descriptive filename with date range
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + (weeks * 7));
+      const filename = `timetable_${startDate}_${weeks}weeks.ics`;
+
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download error:", error);
+      setError("Failed to generate calendar file. Please try again.");
+    }
   }
 
   return (
@@ -295,6 +329,8 @@ export default function Page() {
             <button
               onClick={() => setIsDark(!isDark)}
               className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
@@ -314,12 +350,19 @@ export default function Page() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={importTT} className="btn-primary flex items-center justify-center gap-2 w-full">
+              <button
+                onClick={importTT}
+                className="btn-primary flex items-center justify-center gap-2 w-full"
+                disabled={!rawText.trim()}
+                aria-label="Import timetable data"
+              >
                 <RefreshCw size={16} /> Import
               </button>
               <button
-                onClick={() => { setRawText(""); setTimetable(null); }}
+                onClick={() => { setRawText(""); setTimetable(null); setError(""); }}
                 className="btn-secondary flex items-center justify-center gap-2 w-full"
+                disabled={!rawText && !timetable}
+                aria-label="Clear all data"
               >
                 <Trash2 size={16} /> Clear
               </button>
@@ -364,7 +407,11 @@ export default function Page() {
                     value={weeks}
                     min={1}
                     max={52}
-                    onChange={(e) => setWeeks(+e.target.value)}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (val >= 1 && val <= 52) setWeeks(val);
+                    }}
+                    aria-label="Number of weeks to generate"
                   />
                 </div>
                 <div>
@@ -476,7 +523,12 @@ export default function Page() {
               </div>
 
               <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                <button onClick={download} className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm uppercase tracking-wide">
+                <button
+                  onClick={download}
+                  className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm uppercase tracking-wide"
+                  disabled={!timetable}
+                  aria-label="Download calendar file"
+                >
                   <Download size={18} /> Download Calendar File
                 </button>
               </div>
