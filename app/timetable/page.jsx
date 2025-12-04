@@ -18,15 +18,17 @@ const GOOGLE_COLORS = [
 ];
 
 const periodTimes = {
-  P1: { start: 8 * 60 + 45, duration: 38 },
-  P2: { start: 9 * 60 + 23, duration: 39 },
-  P3b: { start: 10 * 60 + 32, duration: 40 },
-  P4: { start: 11 * 60 + 12, duration: 37 },
-  P5: { start: 11 * 60 + 49, duration: 40 },
-  P6b: { start: 12 * 60 + 59, duration: 38 },
-  P7: { start: 13 * 60 + 37, duration: 40 },
-  P8: { start: 14 * 60 + 17, duration: 40 },
-  P8_Pause: { start: 14 * 60 + 17, duration: 29 },
+  P1: { start: 8 * 60 + 45, duration: 39 },
+  P2: { start: 9 * 60 + 24, duration: 39 },
+  P3a: { start: 10 * 60 + 3, duration: 39 },
+  P3b: { start: 10 * 60 + 33, duration: 39 },
+  P4: { start: 11 * 60 + 12, duration: 39 },
+  P5: { start: 11 * 60 + 51, duration: 39 },
+  P6a: { start: 12 * 60 + 30, duration: 39 },
+  P6b: { start: 13 * 60 + 0, duration: 39 },
+  P7: { start: 13 * 60 + 39, duration: 39 },
+  P8: { start: 14 * 60 + 18, duration: 39 },
+  P8_Pause: { start: 14 * 60 + 18, duration: 29 },
 };
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -50,6 +52,7 @@ export default function Page() {
   const [firstWeekType, setFirstWeekType] = useState("B");
   const [startDate, setStartDate] = useState("2025-11-17");
   const [mergeMulti, setMergeMulti] = useState(true);
+  const [splitTeacherChanges, setSplitTeacherChanges] = useState(false);
 
   const [subjectColors, setSubjectColors] = useState(() => {
     if (typeof window === "undefined") return {};
@@ -146,8 +149,21 @@ export default function Page() {
           const sameTeacher = buf && buf.teacher.trim() === r.teacher.trim();
           const sameRoom = buf && buf.room.trim() === r.room.trim();
 
-          if (sameSubject && sameCode && sameTeacher && sameRoom) {
-            buf.periods.push(r.period);
+          if (sameSubject && sameCode && sameRoom) {
+            if (sameTeacher) {
+              // Same teacher - always merge
+              buf.periods.push(r.period);
+            } else {
+              // Different teacher - merge and combine teacher names
+              buf.periods.push(r.period);
+              // Store multiple teachers
+              if (!buf.teachers) {
+                buf.teachers = [buf.teacher];
+              }
+              if (!buf.teachers.includes(r.teacher.trim())) {
+                buf.teachers.push(r.teacher.trim());
+              }
+            }
           } else {
             if (buf) merged.push(buf);
             buf = { ...r, periods: [r.period] };
@@ -190,10 +206,15 @@ export default function Page() {
     const first = periods[0];
     const last = periods[periods.length - 1];
 
-    const sMin = periodTimes[first].start;
+    // Normalize period names (handle case variations)
+    const firstNorm = first.toUpperCase().replace(/\s/g, '');
+    const lastNorm = last.toUpperCase().replace(/\s/g, '');
+
+    const sMin = periodTimes[firstNorm]?.start ?? periodTimes[first]?.start ?? 0;
     const eMin = isPause
       ? periodTimes["P8_Pause"].start + periodTimes["P8_Pause"].duration
-      : periodTimes[last].start + periodTimes[last].duration;
+      : (periodTimes[lastNorm]?.start ?? periodTimes[last]?.start ?? 0) +
+      (periodTimes[lastNorm]?.duration ?? periodTimes[last]?.duration ?? 0);
 
     return { sMin, eMin };
   }
@@ -217,26 +238,62 @@ export default function Page() {
 
         for (const b of blocks) {
           const isPause = /pause/i.test(b.subject);
+          const hasMultipleTeachers = b.teachers && b.teachers.length > 1;
+          const teacherDisplay = hasMultipleTeachers
+            ? b.teachers.join(" & ")
+            : b.teacher;
 
-          if (mergeMulti) {
-            const { sMin, eMin } = getTimes(b.periods, isPause);
-            const s = new Date(d0); s.setHours(sMin / 60 | 0, sMin % 60, 0);
-            const e = new Date(d0); e.setHours(eMin / 60 | 0, eMin % 60, 0);
+          // If teacher changes exist and split mode is on, create separate events
+          if (hasMultipleTeachers && splitTeacherChanges) {
+            // Split periods among teachers - simplified approach: split evenly
+            const periodsPerTeacher = Math.ceil(b.periods.length / b.teachers.length);
+            b.teachers.forEach((teacher, idx) => {
+              const teacherPeriods = b.periods.slice(
+                idx * periodsPerTeacher,
+                (idx + 1) * periodsPerTeacher
+              );
+              if (teacherPeriods.length === 0) return;
 
-            events.push({
-              s,
-              e,
-              subject: b.subject,
-              code: b.code,
-              teacher: b.teacher,
-              room: b.room,
-              periods: b.periods.join(", "),
-              color: subjectColors[b.subject] || "",
-              week: W,
+              if (mergeMulti) {
+                const { sMin, eMin } = getTimes(teacherPeriods, isPause);
+                const s = new Date(d0); s.setHours(sMin / 60 | 0, sMin % 60, 0);
+                const e = new Date(d0); e.setHours(eMin / 60 | 0, eMin % 60, 0);
+
+                events.push({
+                  s,
+                  e,
+                  subject: b.subject,
+                  code: b.code,
+                  teacher: teacher,
+                  room: b.room,
+                  periods: teacherPeriods.join(", "),
+                  color: subjectColors[b.subject] || "",
+                  week: W,
+                });
+              } else {
+                for (const p of teacherPeriods) {
+                  const { sMin, eMin } = getTimes([p], isPause);
+                  const s = new Date(d0); s.setHours(sMin / 60 | 0, sMin % 60, 0);
+                  const e = new Date(d0); e.setHours(eMin / 60 | 0, eMin % 60, 0);
+
+                  events.push({
+                    s,
+                    e,
+                    subject: b.subject,
+                    code: b.code,
+                    teacher: teacher,
+                    room: b.room,
+                    periods: p,
+                    color: subjectColors[b.subject] || "",
+                    week: W,
+                  });
+                }
+              }
             });
           } else {
-            for (const p of b.periods) {
-              const { sMin, eMin } = getTimes([p], isPause);
+            // Normal flow: combine teachers or single teacher
+            if (mergeMulti) {
+              const { sMin, eMin } = getTimes(b.periods, isPause);
               const s = new Date(d0); s.setHours(sMin / 60 | 0, sMin % 60, 0);
               const e = new Date(d0); e.setHours(eMin / 60 | 0, eMin % 60, 0);
 
@@ -245,12 +302,30 @@ export default function Page() {
                 e,
                 subject: b.subject,
                 code: b.code,
-                teacher: b.teacher,
+                teacher: teacherDisplay,
                 room: b.room,
-                periods: p,
+                periods: b.periods.join(", "),
                 color: subjectColors[b.subject] || "",
                 week: W,
               });
+            } else {
+              for (const p of b.periods) {
+                const { sMin, eMin } = getTimes([p], isPause);
+                const s = new Date(d0); s.setHours(sMin / 60 | 0, sMin % 60, 0);
+                const e = new Date(d0); e.setHours(eMin / 60 | 0, eMin % 60, 0);
+
+                events.push({
+                  s,
+                  e,
+                  subject: b.subject,
+                  code: b.code,
+                  teacher: teacherDisplay,
+                  room: b.room,
+                  periods: p,
+                  color: subjectColors[b.subject] || "",
+                  week: W,
+                });
+              }
             }
           }
         }
@@ -426,6 +501,24 @@ export default function Page() {
                   </select>
                 </div>
               </div>
+              <div className="mt-4">
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={splitTeacherChanges}
+                    onChange={(e) => setSplitTeacherChanges(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-2 accent-indigo-600"
+                  />
+                  <span>Split periods when teacher changes</span>
+                </label>
+                <p className="text-[10px] text-gray-400 mt-1 ml-6">
+                  When unchecked, shows "Teacher A & Teacher B" in merged periods
+                </p>
+              </div>
+              <div className="hidden">
+              </div>
+              <div className="grid grid-cols-1 gap-0">
+              </div>
             </div>
           </div>
         </div>
@@ -496,7 +589,9 @@ export default function Page() {
                                   <div className="flex justify-between items-start">
                                     <div>
                                       <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{b.subject}</div>
-                                      <div className="text-xs text-gray-500 mt-0.5">{b.code} • {b.teacher}</div>
+                                      <div className="text-xs text-gray-500 mt-0.5">
+                                        {b.code} • {b.teachers && b.teachers.length > 1 ? b.teachers.join(" & ") : b.teacher}
+                                      </div>
                                     </div>
                                     <div className="text-right">
                                       <div className="text-xs font-mono font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded">
@@ -535,11 +630,11 @@ export default function Page() {
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 text-gray-400">
-              <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                <Calendar size={40} className="opacity-20" />
+              <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800/50 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                <Calendar size={40} className="opacity-30 dark:opacity-20 text-gray-400 dark:text-gray-500" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ready to Generate</h3>
-              <p className="text-sm max-w-xs mx-auto leading-relaxed">
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
                 Paste your timetable data on the left panel and click Import to visualize your schedule and export it to your calendar.
               </p>
             </div>

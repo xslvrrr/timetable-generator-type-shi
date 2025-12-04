@@ -14,7 +14,7 @@
     --foreground-rgb: 255, 255, 255;
     --background-start-rgb: 10, 10, 10;
     --background-end-rgb: 0, 0, 0;
-    --grid-color: rgba(255, 255, 255, 0.1);
+    --grid-color: rgba(255, 255, 255, 0.03);
   }
 }
 
@@ -50,8 +50,9 @@ body::after {
   }
 
   .dark .glass-card {
-    background-color: rgba(17, 24, 39, 0.9);
-    border-color: rgb(31, 41, 55);
+    background-color: rgba(17, 24, 39, 0.95);
+    border-color: rgb(55, 65, 81);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 
   .input-field {
